@@ -1,5 +1,7 @@
 # Spécifications — RB Lifeline
 
+**Implémentation livrée :** [état par spec et preuves](IMPLEMENTATION_STATUS.md), [validation du produit](../docs/validation.md). Les sections ci-dessous conservent le découpage de conception ; les exports et tests constituent la preuve d’implémentation.
+
 Source fonctionnelle : [rb_lifeline.md](../rb_lifeline.md). Point de départ visuel : [website](../website/README.md). Décisions techniques et répartition du travail : [adr/](../adr/).
 Ces spécifications suivent le format du skill `to-spec` et décrivent du travail à réaliser, sans prétendre qu’il est déjà livré.
 L’audit de la description mise à jour est dans [ALIGNMENT.md](ALIGNMENT.md).

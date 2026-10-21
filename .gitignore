@@ -14,4 +14,7 @@ outputs/
 # JavaScript dependencies, build output and downloaded-file metadata
 node_modules/
 /website/dist/
+/website/public/data/
+/website/test-results/
+/website/playwright-report/
 *:Zone.Identifier

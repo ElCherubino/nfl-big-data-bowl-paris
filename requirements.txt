@@ -12,5 +12,6 @@ matplotlib>=3.9,<4
 # Listed by the organizers' participant guide
 seaborn>=0.13,<1
 pytest>=8,<10
+jsonschema>=4.23,<5
 # Jupyter kernel for notebooks in Kiro/VS Code (the guide asks for saved cell outputs)
 ipykernel>=6.29,<8

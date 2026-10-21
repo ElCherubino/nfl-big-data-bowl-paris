@@ -1,5 +1,7 @@
 # Plan technique et synchronisation de l’équipe
 
+**État après implémentation (21 octobre 2026) :** voir le [registre par spec](../spec/IMPLEMENTATION_STATUS.md) et les [preuves de validation](../docs/validation.md). Le plan et son registre initial ci-dessous sont conservés comme référence de conception ; ils ne représentent plus l’état courant des livrables.
+
 Objectif : trois personnes peuvent développer en même temps sans inventer des interfaces différentes. Les rôles A/B/C sont à attribuer aux personnes présentes ; chaque rôle conserve un propriétaire responsable de l’intégration de son lot.
 
 ## 1. État de départ

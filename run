@@ -1,28 +1,38 @@
 #!/usr/bin/env bash
-# Install the local Python environment when needed, then launch the dashboard.
+# Launch the final React site; source calculations are always explicit.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT"
-
-if [[ -x "$ROOT/.venv/bin/python" ]]; then
-  PY="$ROOT/.venv/bin/python"
-elif [[ -x "$ROOT/.venv/Scripts/python.exe" ]]; then
-  PY="$ROOT/.venv/Scripts/python.exe"
-else
-  PY=""
+usage() {
+  cat <<'HELP'
+Usage: ./run [--build-data | --check] [arguments]
+  default       Validate/copy existing exports and start the React site.
+  --build-data  Explicitly recalculate real tracking data (costly), then validate.
+                Extra arguments go to python -m rb_lifeline build.
+  --check       Validate the existing publication; no calculation or server.
+Environment: RB_DATA_DIR selects exports (default outputs/site).
+Missing Python setup: ./prepare_environnement --no-skills
+Missing web dependencies: cd website && npm ci
+HELP
+}
+MODE="${1:-}"
+if [[ "$MODE" == --help || "$MODE" == -h ]]; then usage; exit 0; fi
+if [[ -x "$ROOT/.venv/bin/python" ]]; then PY="$ROOT/.venv/bin/python";
+elif [[ -x "$ROOT/.venv/Scripts/python.exe" ]]; then PY="$ROOT/.venv/Scripts/python.exe";
+else echo 'Python environment absent. Run ./prepare_environnement --no-skills.' >&2; exit 1; fi
+DATA="${RB_DATA_DIR:-outputs/site}"
+if [[ "$MODE" == --build-data ]]; then
+  shift
+  echo 'Explicit real-data calculation requested. All matches and bootstrap estimates can take several minutes.'
+  exec "$PY" -m rb_lifeline build --output "$DATA" "$@"
+elif [[ "$MODE" == --check ]]; then
+  shift
+  exec "$PY" -m rb_lifeline validate --output "$DATA" --check-source "$@"
 fi
-
-# Only record success after the installer and its import checks finish.
-# A changed requirements file triggers setup again on the next launch.
-if [[ -z "$PY" ]] || [[ ! -f .venv/requirements-installed.txt ]] ||
-   ! cmp -s requirements.txt .venv/requirements-installed.txt; then
-  ./prepare_environnement --no-skills
-  cp requirements.txt .venv/requirements-installed.txt
-  if [[ -x "$ROOT/.venv/bin/python" ]]; then
-    PY="$ROOT/.venv/bin/python"
-  else
-    PY="$ROOT/.venv/Scripts/python.exe"
-  fi
-fi
-
-exec "$PY" -m streamlit run "$ROOT/app.py" "$@"
+command -v node >/dev/null || { echo 'Node >=22.12 is required.' >&2; exit 1; }
+command -v npm >/dev/null || { echo 'npm is required.' >&2; exit 1; }
+node -e 'const [major,minor]=process.versions.node.split(".").map(Number); if(major<22||(major===22&&minor<12)){console.error("Node >=22.12 is required."); process.exit(1)}'
+[[ -d website/node_modules ]] || { echo 'Web dependencies absent. Run: cd website && npm ci' >&2; exit 1; }
+cd website
+npm run data
+exec npm run dev -- "$@"
