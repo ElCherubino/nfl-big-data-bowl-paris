@@ -21,6 +21,15 @@ Ce dossier fixe les choix techniques à implémenter et les règles de travail c
 
 Ces décisions constituent la référence technique du POC. Les commandes et fichiers annoncés dans le plan sont **à créer**, sauf ceux signalés comme existants. Les tests de documentation ne valent pas validation du produit.
 
+```mermaid
+flowchart LR
+  CSV[CSV NFL] --> PY[Pipeline Python]
+  PY --> CHECK[Contrats et cohérence]
+  CHECK --> JSON[Publication JSON statique]
+  JSON --> COACH[Coach : matchs, tableaux, rejeu SVG]
+  JSON --> TV[Broadcaster : classement saison]
+```
+
 ## Maintenir la synchronisation
 
 Le besoin courant est défini par la description produit ; les specs doivent le refléter. Les ADR expliquent les choix, et CONTRACTS fixe les noms/types utilisés entre développeurs. En cas de divergence, ouvrir un changement explicite et mettre à jour les documents et tests concernés dans la même modification, au lieu de corriger un seul consommateur.

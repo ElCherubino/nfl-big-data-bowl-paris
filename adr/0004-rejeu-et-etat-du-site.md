@@ -19,7 +19,7 @@ Ces noms décrivent l’interface cible à implémenter ; les signatures JSDoc e
 
 Le SVG utilise un repère 120 × 53,3 yd avec attaque vers +x, puis inverse l’axe vertical pour le rendu écran. Pour une orientation o, le vecteur terrain est (sin(o), cos(o)) ; la projection applique l’inversion d’axe au vecteur comme aux positions. La balle et les joueurs absents restent absents ; la ligne de scrimmage vient du calcul.
 
-Une horloge requestAnimationFrame avance selon le temps écoulé × vitesse, puis sélectionne une frame source à 10 Hz. La pause annule la boucle ; les vitesses obligatoires sont 0,5× et 1×. Les traces utilisent seulement les positions passées du jeu courant, longues pour QB/RB, courtes pour les autres. Le changement de jeu efface l’horloge et les traces.
+L’ouverture d’un jeu affiche le snap en pause. Une horloge requestAnimationFrame avance selon le temps écoulé × vitesse, puis sélectionne une frame source à 10 Hz. La pause annule la boucle ; les vitesses obligatoires sont 0,5× et 1×. Les traces utilisent seulement les positions passées du jeu courant, longues pour QB/RB, courtes pour les autres. Le changement de jeu efface l’horloge et les traces.
 
 Les états par frame pilotent vert/rouge/gris avec ✓/✗ et un libellé d’inconnue. Le panneau à la pression reste attaché à sa frame et à ses valeurs fixes. Lors d’une lecture qui franchit la pression depuis une frame antérieure, s’arrêter exactement dessus ; une reprise explicite peut poursuivre après cette pause jusqu’à la fin. Pas de nouvelle pause automatique en restant ou en repartant de la même frame ; un retour avant pression réarme l’arrêt.
 

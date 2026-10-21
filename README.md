@@ -4,3 +4,5 @@ After cloning, run `./run` (requires Python 3.11+, Git and internet on first set
 It creates `.venv`, installs dependencies and launches the starter dashboard.
 Verify: `./prepare_environnement --check --no-skills` and `./test_env --no-skills`.
 See [SETUP.md](SETUP.md) for dependencies, notebooks and optional AWS support.
+
+Développement RB Lifeline : [spécifications](spec/README.md), [architecture et contrats](adr/README.md), [répartition de l’implémentation](adr/IMPLEMENTATION.md).
