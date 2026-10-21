@@ -32,7 +32,7 @@ cd ..
 
 Open the URL printed by Vite. The default `./run` validates and copies existing exports before launching the final React site. It never silently recalculates tracking or launches the starter Streamlit app. Missing dependencies and invalid/missing publications fail with a corrective command. See [SETUP.md](SETUP.md) for generic tooling and optional AWS support.
 
-Expected sources in `nfl-data/nfl-big-data-bowl-regional-event-data/data/`: `games.csv`, `plays.csv`, `players.csv`, `pffScoutingData.csv` and one `tracking/tracking_<gameId>.csv` file per match. The supplied release contains 122 tracking files. If missing, initialize the submodule and check the supplied event-data access instructions; no synthetic data substitutes for absent inputs.
+Expected sources in `nfl-data/data/`: `games.csv`, `plays.csv`, `players.csv`, `pffScoutingData.csv` and one `tracking/tracking_<gameId>.csv` file per match. The supplied release contains 122 tracking files. If missing, initialize the submodule and check the supplied event-data access instructions; no synthetic data substitutes for absent inputs.
 
 For a faster explicitly limited run, use `RB_DATA_DIR=outputs/one-game ./run --build-data --game-id 2021090900`, then `RB_DATA_DIR=outputs/one-game ./run`. Counts and ranking eligibility reflect that reduced publication; it is not the full league result.
 

@@ -98,7 +98,7 @@ def audit(publication, data_dir):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--publication', type=Path, default=Path('outputs/site'))
-    parser.add_argument('--data-dir', type=Path, default=Path('nfl-data/nfl-big-data-bowl-regional-event-data/data'))
+    parser.add_argument('--data-dir', type=Path, default=Path('nfl-data/data'))
     parser.add_argument('--output', type=Path, default=Path('outputs/validation/play-audit.json'))
     args = parser.parse_args()
     result = audit(args.publication, args.data_dir)

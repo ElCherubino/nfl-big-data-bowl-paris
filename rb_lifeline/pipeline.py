@@ -13,7 +13,7 @@ from .metrics import evaluate_play
 from .publish import publish
 
 
-DEFAULT_DATA_DIR = Path('nfl-data/nfl-big-data-bowl-regional-event-data/data')
+DEFAULT_DATA_DIR = Path('nfl-data/data')
 
 
 def build(data_dir=DEFAULT_DATA_DIR, output='outputs/site', *, game_ids=None, parameters=None):

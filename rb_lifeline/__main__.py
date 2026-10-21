@@ -9,7 +9,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description='Build and validate the static RB Lifeline publication.')
     commands = parser.add_subparsers(dest='command', required=True)
     build_parser = commands.add_parser('build')
-    build_parser.add_argument('--data-dir', default='nfl-data/nfl-big-data-bowl-regional-event-data/data')
+    build_parser.add_argument('--data-dir', default='nfl-data/data')
     build_parser.add_argument('--output', default='outputs/site')
     build_parser.add_argument('--game-id', action='append', help='Explicitly build a smaller match scope (repeatable).')
     build_parser.add_argument('--bootstrap-replicates', type=int, default=2000)
@@ -17,7 +17,7 @@ def main(argv=None):
     validate_parser = commands.add_parser('validate')
     validate_parser.add_argument('--output', default='outputs/site')
     validate_parser.add_argument('--check-source', action='store_true', help='Reject exports whose source fingerprint differs from the current CSV files.')
-    validate_parser.add_argument('--data-dir', default='nfl-data/nfl-big-data-bowl-regional-event-data/data')
+    validate_parser.add_argument('--data-dir', default='nfl-data/data')
     args = parser.parse_args(argv)
     try:
         if args.command == 'build':
