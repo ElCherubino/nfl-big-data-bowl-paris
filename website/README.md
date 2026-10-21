@@ -2,7 +2,7 @@
 
 React/Vite client for **real Python exports**, useful for coach review, scout shortlists and reporter preparation. No AWS credentials are required. No product fallback supplies demonstration statistics.
 
-From the repository root, initialize source submodules and the Python environment as described in [README](../README.md), then:
+From the repository root, prepare the Python environment as described in [README](../README.md). The source CSVs are included in the repository under `nfl-data/data/`. Then:
 
 ```bash
 cd website

@@ -59,7 +59,7 @@ def test_tracking_duplicate_and_unknown_join_are_rejected(sources_dir):
 
 
 def test_missing_sources_gives_setup_instruction(tmp_path):
-    with pytest.raises(DataError, match="git submodule update"):
+    with pytest.raises(DataError, match="Restore the tracked nfl-data/data files"):
         load_sources(tmp_path)
 
 
