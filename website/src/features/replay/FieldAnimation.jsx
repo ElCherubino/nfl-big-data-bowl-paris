@@ -25,7 +25,8 @@ function Replay({ play, players = {}, selectedNflId, onSelectBack, parameters = 
 
   useEffect(() => {
     setIndex(0);
-    setPlaying(false);
+    // Start the replay on open unless the viewer asked for reduced motion.
+    setPlaying(!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
     pressureVisited.current = false;
   }, [play]);
   useEffect(() => { onFrameChange?.(frame); }, [frame, onFrameChange]);
@@ -64,6 +65,7 @@ function Replay({ play, players = {}, selectedNflId, onSelectBack, parameters = 
   return <div className="replay-component">
     <div className="replay-panel-heading"><h3>Rejeu du dropback</h3><span>Attaque → · coordonnées normalisées · yards</span></div>
     <div className="replay-back-picker"><label>Back suivi <select value={backId ?? ''} onChange={(event) => onSelectBack?.(event.target.value)} disabled={!backs.length}>{!backs.length && <option value="">Aucun back observé</option>}{backs.map((back) => <option key={back.nflId} value={back.nflId}>{players[back.nflId]?.displayName ?? back.nflId} · {players[back.nflId]?.officialPosition ?? 'Back'}</option>)}</select></label><strong className={`replay-status replay-status-${status}`}>{STATUS_LABELS[status]}</strong></div>
+    <PlayOutcome play={play} observation={observation} players={players} />
     <svg className="replay-field" viewBox="-2 -3 124 60" role="img" aria-label={`Terrain à ${frame.timeS.toFixed(1)} secondes, frame ${frame.frameId}. ${STATUS_LABELS[status]}`}>
       <title>Positions observées des joueurs et de la balle</title>
       <desc>Terrain de 120 yards sur 53,3. L’attaque va vers la droite. Les flèches indiquent l’orientation corporelle. Les mesures textuelles figurent sous le terrain.</desc>
@@ -96,7 +98,37 @@ function Replay({ play, players = {}, selectedNflId, onSelectBack, parameters = 
     </div>
     <label className="replay-scrubber">Temps : {frame.timeS.toFixed(1)} s · frame {frame.frameId}<span className="replay-timeline"><input type="range" min="0" max={frames.length - 1} step="1" value={index} onChange={(event) => seek(Number(event.target.value))} aria-label="Frame du rejeu" aria-valuetext={`${frame.timeS.toFixed(1)} secondes, frame ${frame.frameId}`} />{pressureIndex >= 0 && <span className="replay-pressure-marker" style={{ left: `${frames.length > 1 ? pressureIndex / (frames.length - 1) * 100 : 0}%` }} title={`Pression à la frame ${play.events.pressureFrameId}`} aria-hidden="true">▴</span>}</span></label>
     <p className="replay-note">{pressureIndex >= 0 ? 'Arrêt automatique à la première pression. Appuyez sur Lire pour poursuivre au-delà.' : play.pressure?.status === 'none' ? 'Aucune pression détectée → non compté. Le rejeu reste consultable.' : 'Instant de pression indéterminé.'} Fin observée : {play.events?.endKind ?? 'inconnue'}. {play.quality?.reasons?.join(' · ')}</p>
-    <PressurePanel observation={observation} parameters={parameters} currentTime={frame.timeS} currentState={currentState} pressure={play.pressure} pressureFrameId={play.events?.pressureFrameId} />
+    <PressurePanel observation={observation} parameters={parameters} pressure={play.pressure} />
     <details className="replay-text"><summary>Alternative textuelle : positions à cette frame</summary><table className="replay-checks"><thead><tr><th>Participant</th><th>Équipe</th><th>x (yd)</th><th>y (yd)</th><th>Orientation</th></tr></thead><tbody>{frame.entities.map((entity) => <tr key={entity.nflId ?? 'football'}><th scope="row">{entity.nflId === null ? 'Balle' : players[entity.nflId]?.displayName ?? entity.nflId}</th><td>{entity.team}</td><td>{entity.x}</td><td>{entity.y}</td><td>{entity.o == null ? 'Indéterminée' : `${entity.o}°`}</td></tr>)}</tbody></table></details>
   </div>;
 }
+
+/** What happened on the play and what the followed back did in it, read from published fields only. */
+function PlayOutcome({ play, observation, players }) {
+  const result = PASS_RESULTS[play.passResult];
+  const yards = typeof play.playResult === 'number' ? `${play.playResult > 0 ? '+' : ''}${play.playResult} yd` : null;
+  const name = (id) => players[id]?.displayName ?? id;
+  const targetName = play.target?.status === 'matched' && play.target.nflId !== observation?.nflId ? name(play.target.nflId) : null;
+  let targeted = ['unknown', 'Inconnu'];
+  let caught = ['unknown', 'Inconnu'];
+  if (!observation) targeted = caught = ['unknown', 'Aucun RB observé'];
+  else if (observation.targetStatus === 'not_applicable') targeted = caught = ['neutral', 'Pas de passe'];
+  else if (observation.targetStatus === 'matched') {
+    targeted = observation.targeted ? ['yes', 'Oui'] : ['no', 'Non'];
+    caught = !observation.targeted ? ['neutral', 'Non visé'] : observation.completedWhenTargeted === true ? ['yes', 'Oui'] : observation.completedWhenTargeted === false ? ['no', 'Non'] : ['unknown', 'Inconnu'];
+  }
+  const available = play.pressure?.status === 'none' ? ['neutral', 'Pas de pression'] : { available: ['yes', 'Oui'], unavailable: ['no', 'Non'], blocking: ['neutral', 'Au bloc'] }[observation?.status] ?? ['unknown', 'Indéterminé'];
+  return <dl className="play-outcome" aria-label="Résultat de l’action et rôle du RB">
+    <div className={`play-outcome-item outcome-${result?.tone ?? 'unknown'}`}><dt>Résultat de l’action</dt><dd>{result?.label ?? 'Indisponible'}{yards && <small>{yards}</small>}</dd></div>
+    <div className={`play-outcome-item outcome-${targeted[0]}`}><dt>RB visé</dt><dd>{targeted[1]}{targetName && <small>Passe vers {targetName}</small>}</dd></div>
+    <div className={`play-outcome-item outcome-${caught[0]}`}><dt>RB a attrapé</dt><dd>{caught[1]}</dd></div>
+    <div className={`play-outcome-item outcome-${available[0]}`}><dt>RB disponible à la pression</dt><dd>{available[1]}</dd></div>
+  </dl>;
+}
+const PASS_RESULTS = {
+  C: { label: 'Passe complète', tone: 'yes' },
+  I: { label: 'Passe incomplète', tone: 'no' },
+  IN: { label: 'Interception', tone: 'no' },
+  S: { label: 'Sack', tone: 'no' },
+  R: { label: 'Course du QB (scramble)', tone: 'neutral' },
+};

@@ -12,14 +12,13 @@ const pressureIndex=play.frames.findIndex(f=>f.frameId===play.events.pressureFra
 const appPath=new URL(process.env.RB_BROWSER_URL||'http://127.0.0.1:4173').pathname;
 const start=(page,query='')=>page.goto(`${appPath}${query}`);
 
-test('coach selects real game and play, stops at pressure, resumes observed trajectory',async({page})=>{
+test('coach selects real game and play, replay starts on its own, stops at pressure, resumes observed trajectory',async({page})=>{
  await start(page); await page.getByRole('combobox',{name:'Match',exact:true}).selectOption(game.gameId);
  await page.getByLabel('Rechercher un jeu').fill(play.playId);
  await page.getByRole('button',{name:'Revoir le jeu'}).click();
  await expect(page.getByRole('img',{name:/Terrain à/})).toBeVisible();
+ await expect(page.getByRole('definition').first()).toBeVisible();
  const timeline=page.getByRole('slider',{name:'Frame du rejeu'});
- await expect(timeline).toHaveValue('0');
- await page.getByRole('button',{name:'▶ Lire',exact:true}).click();
  await expect(timeline).toHaveValue(String(pressureIndex),{timeout:20000});
  await expect(page.getByRole('button',{name:'▶ Lire',exact:true})).toBeVisible();
  await expect(page.getByRole('img',{name:new RegExp(`frame ${play.events.pressureFrameId}\\.`)})).toBeVisible();
@@ -103,18 +102,23 @@ test('capture five real audit plays from published tracking',async({page})=>{
  }
 });
 
-test('no-pressure replay exposes published current checks without counting opportunity',async({page})=>{
- const noPressure=bundle.plays.find(p=>p.playId==='97')||bundle.plays.find(p=>p.pressure.status==='none'&&p.frames.length>1&&p.frames[0].rbStates.length);
+test('no-pressure replay shows the play outcome and RB role without a pressure table',async({page})=>{
+ const noPressure=bundle.plays.find(p=>p.playId==='97')||bundle.plays.find(p=>p.pressure.status==='none'&&p.observations.length&&p.passResult==='I');
  await start(page,`?game=${game.gameId}&play=${noPressure.playId}`);
- await page.getByText('Conditions à l’instant affiché',{exact:true}).click();
- const table=page.locator('.replay-current-checks table');
- await expect(table).toBeVisible();
- await expect(table.getByRole('row')).toHaveCount(6);
- const state=noPressure.frames[0].rbStates[0];
- await expect(table).toContainText(state.checks.routeRunner.passed?'Oui':'Non');
- await expect(page.getByRole('region',{name:'Mesures publiées à la pression'})).toContainText('Aucune pression détectée → non compté.');
- await page.getByRole('button',{name:'Frame →',exact:true}).click();
- await expect(page.getByRole('slider')).toHaveValue('1');
- await expect(page.locator('.replay-current')).toContainText(`${noPressure.frames[1].timeS.toFixed(1)} s`);
- await expect(page.getByRole('region',{name:'Mesures publiées à la pression'})).toContainText('Aucune pression détectée → non compté.');
+ const outcome=page.locator('.play-outcome');
+ await expect(outcome).toContainText('Passe incomplète');
+ await expect(outcome).toContainText('RB disponible à la pression');
+ await expect(outcome).toContainText('Pas de pression');
+ const region=page.getByRole('region',{name:'Mesures publiées à la pression'});
+ await expect(region).toContainText('Aucune pression détectée sur cette action.');
+ await expect(region.locator('table')).toHaveCount(0);
+});
+
+test('pressure table colours each threshold as met or missed',async({page})=>{
+ const observation=play.observations.find(o=>o.counted);
+ await start(page,`?game=${game.gameId}&play=${play.playId}&back=${observation.nflId}`);
+ const rows=page.getByRole('region',{name:'Mesures publiées à la pression'}).locator('tbody tr');
+ await expect(rows).toHaveCount(5);
+ const passed=Object.values(observation.checks).filter(c=>c.passed===true).length;
+ await expect(page.locator('tr.check-met')).toHaveCount(passed);
 });

@@ -1,5 +1,7 @@
 # CHECKDOWN · RB Lifeline
 
+**Live site:** https://rb-lifeline.vercel.app
+
 **RB Lifeline** helps an offensive coach answer one question: when pressure reaches my quarterback (QB), is my running back (RB) there as an outlet? The coach dashboard replays dropback plays in 2D, shows frame by frame whether a routing RB/FB is open, within QB range, sufficiently past the line and facing the QB, and summarizes availability so staff can choose which plays and protections to review on film. Scouts use the season tables to identify backs worth reviewing; broadcasters use the season-only “Best safety valves” ranking.
 
 The updated [project description](rb_lifeline.md) specifies a 120° orientation rule and a **Lifeline score** combining availability under pressure with receiving reliability. The current implementation still defaults to 90° and ranks regularized availability; those newer requirements remain to be integrated. Read the parameters in each publication to identify the rules behind its results.
@@ -48,7 +50,7 @@ npm run test:browser
 npm run preview
 ```
 
-`npm run build` validates the selected publication and copies its manifest, tables and observed trajectories into the static build. `RB_DATA_DIR` selects another export folder relative to the repository. A path-prefix build is supported with `npm run build -- --base=/checkdown/`; serve it with `npm run preview -- --base=/checkdown/` and verify with `RB_BROWSER_URL=http://127.0.0.1:4173/checkdown/ npm run test:browser`. Derived exports, environments, browser captures and `dist` are ignored by Git. This repository does not claim a public deployment.
+`npm run build` validates the selected publication and copies its manifest, tables and observed trajectories into the static build. `RB_DATA_DIR` selects another export folder relative to the repository. A path-prefix build is supported with `npm run build -- --base=/checkdown/`; serve it with `npm run preview -- --base=/checkdown/` and verify with `RB_BROWSER_URL=http://127.0.0.1:4173/checkdown/ npm run test:browser`. Derived exports, environments, browser captures and `dist` are ignored by Git. A static build is deployed on Vercel at https://rb-lifeline.vercel.app.
 
 ## Interpret carefully
 

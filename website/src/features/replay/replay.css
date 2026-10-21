@@ -21,15 +21,30 @@
 .replay-timeline { display: block; position: relative; padding-bottom: .5rem; }
 .replay-pressure-marker { position: absolute; bottom: -.15rem; transform: translateX(-50%); color: #ffe16a; pointer-events: none; }
 .replay-pressure { background: rgba(8, 22, 34, .6); border: 1px solid #304657; border-radius: 10px; padding: 1rem; margin-top: 1rem; font-size: .85rem; }
-.replay-current { color: #b9d8e6; }
 .replay-table-scroll, .replay-text { overflow-x: auto; }
 .replay-checks { width: 100%; border-collapse: collapse; font-size: .8rem; }
 .replay-checks td, .replay-checks th { text-align: left; padding: .65rem .5rem; border-bottom: 1px solid #304657; white-space: normal; }
 .replay-checks th { font-weight: 500; }
+.replay-checks tbody th { font-size: .85rem; letter-spacing: normal; text-transform: none; color: inherit; }
 .replay-checks thead th { color: #a7b6c1; }
 .replay-checks small { display: block; color: #a7b6c1; max-width: 220px; overflow-wrap: anywhere; }
 .replay-text { margin-top: 1rem; font-size: .85rem; }
 .replay-text summary { cursor: pointer; padding: .5rem 0; }
+.check-met td, .check-met th { background: rgba(85, 219, 156, .08); }
+.check-missed td, .check-missed th { background: rgba(250, 132, 132, .08); }
+.check-result { display: inline-block; border-radius: 4px; padding: .2rem .5rem; font-weight: 600; white-space: nowrap; }
+.check-met .check-result { color: #8becc4; background: #18352c; border: 1px solid #346854; }
+.check-missed .check-result { color: #ffb1b8; background: #38242c; border: 1px solid #85444e; }
+.check-unknown .check-result { color: #d7d2c4; background: #34322a; border: 1px solid #69644e; }
+.play-outcome { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .6rem; margin: 0 0 1rem; }
+.play-outcome-item { margin: 0; padding: .7rem .85rem; border-radius: 8px; border: 1px solid #304657; background: #122536; }
+.play-outcome dt { color: var(--muted, #a7b6c1); font-size: .7rem; letter-spacing: .04em; text-transform: uppercase; }
+.play-outcome dd { margin: .3rem 0 0; font-size: 1.05rem; font-weight: 600; }
+.play-outcome dd small { display: block; margin-top: .15rem; font-size: .75rem; font-weight: 400; color: var(--muted, #a7b6c1); }
+.outcome-yes { border-color: #346854; background: #18352c; } .outcome-yes dd { color: #8becc4; }
+.outcome-no { border-color: #85444e; background: #38242c; } .outcome-no dd { color: #ffb1b8; }
+.outcome-unknown dd { color: #d7d2c4; }
+.replay-pressure h3 { margin-bottom: .7rem; }
 .replay-empty { padding: 1.5rem; background: #122536; border: 1px solid #304657; border-radius: 10px; }
 @media (max-width: 640px) {
   .replay-pressure { padding: .7rem; }
