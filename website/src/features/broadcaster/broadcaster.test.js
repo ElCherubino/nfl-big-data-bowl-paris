@@ -17,15 +17,15 @@ test('empty cohort is empty; incompatible data cannot become a ranking', () => {
 });
 test('top ten language requires a published percentile of at least ninety', () => {
   const below = quoteFor(row('a',20,1,89));
-  assert.match(below,/percentile de 89/);
+  assert.match(below,/89 percentile/);
   assert.doesNotMatch(below,/top 10/);
   const boundary = quoteFor(row('a',20,1,90));
-  assert.match(boundary,/top 10 %/);
-  assert.match(boundary,/20 routes pressurées évaluables/);
+  assert.match(boundary,/top 10%/);
+  assert.match(boundary,/20 evaluable pressured routes/);
   assert.ok(boundary.includes(PERIOD));
-  assert.doesNotMatch(quoteFor(row('a',20,1,null)),/top 10|percentile de/);
+  assert.doesNotMatch(quoteFor(row('a',20,1,null)),/top 10|percentile/);
 });
 test('null rates remain unavailable and percentage display uses fractions', () => {
-  assert.equal(formatRate(null),'Indisponible');
-  assert.equal(formatRate(0.3),'30 %');
+  assert.equal(formatRate(null),'Unavailable');
+  assert.equal(formatRate(0.3),'30%');
 });

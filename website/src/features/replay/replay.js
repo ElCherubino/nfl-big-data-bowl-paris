@@ -2,10 +2,10 @@ export const FIELD_WIDTH = 120;
 export const FIELD_HEIGHT = 53.3;
 
 export const STATUS_LABELS = {
-  available: '✓ Disponible',
-  unavailable: '✗ Indisponible',
-  blocking: '▰ Au bloc',
-  unknown: '? Indéterminé',
+  available: '✓ Available',
+  unavailable: '✗ Unavailable',
+  blocking: '▰ Blocking',
+  unknown: '? Undetermined',
 };
 
 export function orientationVector(degrees, length = 2.4) {

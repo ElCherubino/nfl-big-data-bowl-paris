@@ -13,49 +13,49 @@ const appPath=new URL(process.env.RB_BROWSER_URL||'http://127.0.0.1:4173').pathn
 const start=(page,query='')=>page.goto(`${appPath}${query}`);
 
 test('coach selects real game and play, replay starts on its own, stops at pressure, resumes observed trajectory',async({page})=>{
- await start(page); await page.getByRole('combobox',{name:'Match',exact:true}).selectOption(game.gameId);
- await page.getByLabel('Rechercher un jeu').fill(play.playId);
- await page.getByRole('button',{name:'Revoir le jeu'}).click();
- await expect(page.getByRole('img',{name:/Terrain à/})).toBeVisible();
+ await start(page); await page.getByRole('combobox',{name:'Game',exact:true}).selectOption(game.gameId);
+ await page.getByLabel('Search plays').fill(play.playId);
+ await page.getByRole('button',{name:'Replay the play'}).click();
+ await expect(page.getByRole('img',{name:/Field at/})).toBeVisible();
  await expect(page.getByRole('definition').first()).toBeVisible();
- const timeline=page.getByRole('slider',{name:'Frame du rejeu'});
+ const timeline=page.getByRole('slider',{name:'Replay frame'});
  await expect(timeline).toHaveValue(String(pressureIndex),{timeout:20000});
- await expect(page.getByRole('button',{name:'▶ Lire',exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'▶ Play',exact:true})).toBeVisible();
  await expect(page.getByRole('img',{name:new RegExp(`frame ${play.events.pressureFrameId}\\.`)})).toBeVisible();
- await page.getByRole('button',{name:'▶ Lire',exact:true}).click();
+ await page.getByRole('button',{name:'▶ Play',exact:true}).click();
  await expect.poll(async()=>Number(await timeline.inputValue())).toBeGreaterThan(pressureIndex);
- await page.getByRole('button',{name:'À la pression'}).click();
+ await page.getByRole('button',{name:'At pressure'}).click();
  await expect(timeline).toHaveValue(String(pressureIndex));
- await expect(page.locator('.replay-checks').first()).toContainText('En route');
+ await expect(page.locator('.replay-checks').first()).toContainText('Running a route');
 });
 
 test('match back evidence filter can be removed and browser history restores views',async({page})=>{
  await start(page,`?game=${game.gameId}&view=match`);
- await page.getByRole('button',{name:'Voir ses jeux'}).first().click();
- await expect(page.getByRole('button',{name:/Retirer le filtre/})).toBeVisible();
- await page.getByRole('button',{name:/Retirer le filtre/}).click();
- await expect(page.getByRole('button',{name:/Retirer le filtre/})).toHaveCount(0);
- await page.goBack(); await expect(page.getByRole('button',{name:/Retirer le filtre/})).toBeVisible();
- await page.goForward(); await expect(page.getByRole('button',{name:/Retirer le filtre/})).toHaveCount(0);
+ await page.getByRole('button',{name:'View plays'}).first().click();
+ await expect(page.getByRole('button',{name:/Remove filter/})).toBeVisible();
+ await page.getByRole('button',{name:/Remove filter/}).click();
+ await expect(page.getByRole('button',{name:/Remove filter/})).toHaveCount(0);
+ await page.goBack(); await expect(page.getByRole('button',{name:/Remove filter/})).toBeVisible();
+ await page.goForward(); await expect(page.getByRole('button',{name:/Remove filter/})).toHaveCount(0);
 });
 
 test('scout filters retain published rank and denominator',async({page})=>{
  const season=read(manifest.resources.seasonRb).data;
  const row=season.rows.find(r=>r.eligible)||season.rows[0];
  await start(page,'?view=season');
- await page.getByLabel('Nom ou identifiant').fill(row.nflId);
+ await page.getByLabel('Name or ID').fill(row.nflId);
  const tr=page.getByRole('row').filter({has:page.getByText(row.displayName,{exact:true})});
  const cells=await tr.getByRole('cell').allTextContents();
- expect(cells[0]).toContain(row.eligible?String(row.rank):'Non classé');
+ expect(cells[0]).toContain(row.eligible?String(row.rank):'Unranked');
  expect(cells[2]).toBe(String(row.counts.evaluatedPlays));
- await page.getByLabel('Équipe observée').selectOption(row.teams[0]);
+ await page.getByLabel('Observed team').selectOption(row.teams[0]);
  expect(await tr.getByRole('cell').allTextContents()).toEqual(cells);
 });
 
 test('broadcaster requests season only and offers no replay',async({page})=>{
  const requests=[];page.on('request',r=>requests.push(r.url()));
  await start(page,'?entry=broadcaster');
- await expect(page.getByRole('heading',{name:/LE RÉCIT/})).toBeVisible();
+ await expect(page.getByRole('heading',{name:/THE STORY/})).toBeVisible();
  await expect(page.getByRole('alert')).toHaveCount(0);
  await expect(page.locator('table').first()).toBeVisible();
  expect(requests.filter(u=>/game_\d+\.json/.test(u))).toEqual([]);
@@ -64,9 +64,9 @@ test('broadcaster requests season only and offers no replay',async({page})=>{
 
 test('invalid linked selection recovers to catalogue',async({page})=>{
  await start(page,'?game=absent&play=123');
- await expect(page.getByRole('alert')).toContainText('Sélection invalide');
- await page.getByRole('button',{name:'Revenir au catalogue'}).click();
- await expect(page.getByRole('combobox',{name:'Match',exact:true})).toBeVisible();
+ await expect(page.getByRole('alert')).toContainText('Invalid selection');
+ await page.getByRole('button',{name:'Back to catalogue'}).click();
+ await expect(page.getByRole('combobox',{name:'Game',exact:true})).toBeVisible();
  await expect(page.getByRole('alert')).toHaveCount(0);
 });
 
@@ -75,19 +75,19 @@ for(const kind of ['missing','schema','generation','network']) test(`explicit ${
  if(kind==='schema') await page.route('**/data/manifest.json',route=>route.fulfill({json:{...manifest,schemaVersion:'99.0.0'}}));
  if(kind==='generation') await page.route('**/season_rb.json',async route=>{const response=await route.fetch();await route.fulfill({json:{...await response.json(),generationId:'stale-test-generation'}});});
  await start(page);
- await expect(page.getByRole('alert')).toContainText('Publication indisponible');
- await expect(page.getByRole('alert')).toContainText({missing:'Publication absente',schema:'incompatible',generation:'générations différentes',network:'Impossible de charger'}[kind]);
+ await expect(page.getByRole('alert')).toContainText('Publication unavailable');
+ await expect(page.getByRole('alert')).toContainText({missing:'Publication missing',schema:'incompatible',generation:'different generations',network:'Unable to load'}[kind]);
  await expect(page.locator('.rate-highlight')).toHaveCount(0);
 });
 
 test('mobile keyboard opens a real replay with textual alternative',async({page})=>{
  await page.setViewportSize({width:390,height:844});
  await start(page,`?game=${game.gameId}&play=${play.playId}`);
- await expect(page.getByRole('img',{name:/Terrain à/})).toBeVisible();
- const button=page.getByRole('button',{name:'À la pression'});
+ await expect(page.getByRole('img',{name:/Field at/})).toBeVisible();
+ const button=page.getByRole('button',{name:'At pressure'});
  await button.focus();await page.keyboard.press('Enter');
  await expect(page.getByRole('slider')).toHaveValue(String(pressureIndex));
- await page.getByText('Alternative textuelle : positions à cette frame').click();
+ await page.getByText('Text alternative: positions at this frame').click();
  await expect(page.locator('.replay-text table')).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBeTruthy();
 });
@@ -96,8 +96,8 @@ test('capture five real audit plays from published tracking',async({page})=>{
  test.skip(!bundle.plays.some(p=>p.playId==='4560'),'Audit match not in this publication');
  for(const id of ['4560','2279','97','349','1368']){
   await start(page,`?game=${game.gameId}&play=${id}`);
-  const field=page.getByRole('img',{name:/Terrain à/}); await expect(field).toBeVisible();
-  const pressure=page.getByRole('button',{name:'À la pression'});if(await pressure.isEnabled()) await pressure.click();
+  const field=page.getByRole('img',{name:/Field at/}); await expect(field).toBeVisible();
+  const pressure=page.getByRole('button',{name:'At pressure'});if(await pressure.isEnabled()) await pressure.click();
   await page.locator('#selected-replay').screenshot({path:`test-results/audit-${game.gameId}-${id}.png`});
  }
 });
@@ -106,18 +106,18 @@ test('no-pressure replay shows the play outcome and RB role without a pressure t
  const noPressure=bundle.plays.find(p=>p.playId==='97')||bundle.plays.find(p=>p.pressure.status==='none'&&p.observations.length&&p.passResult==='I');
  await start(page,`?game=${game.gameId}&play=${noPressure.playId}`);
  const outcome=page.locator('.play-outcome');
- await expect(outcome).toContainText('Passe incomplète');
- await expect(outcome).toContainText('RB disponible à la pression');
- await expect(outcome).toContainText('Pas de pression');
- const region=page.getByRole('region',{name:'Mesures publiées à la pression'});
- await expect(region).toContainText('Aucune pression détectée sur cette action.');
+ await expect(outcome).toContainText('Incomplete pass');
+ await expect(outcome).toContainText('RB open at pressure');
+ await expect(outcome).toContainText('No pressure');
+ const region=page.getByRole('region',{name:'Published measurements at pressure'});
+ await expect(region).toContainText('No pressure detected on this play.');
  await expect(region.locator('table')).toHaveCount(0);
 });
 
 test('pressure table colours each threshold as met or missed',async({page})=>{
  const observation=play.observations.find(o=>o.counted);
  await start(page,`?game=${game.gameId}&play=${play.playId}&back=${observation.nflId}`);
- const rows=page.getByRole('region',{name:'Mesures publiées à la pression'}).locator('tbody tr');
+ const rows=page.getByRole('region',{name:'Published measurements at pressure'}).locator('tbody tr');
  await expect(rows).toHaveCount(5);
  const passed=Object.values(observation.checks).filter(c=>c.passed===true).length;
  await expect(page.locator('tr.check-met')).toHaveCount(passed);

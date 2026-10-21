@@ -1,6 +1,6 @@
-export const PERIOD = '2021 · semaines 1–8';
-export const formatNumber = value => value.toLocaleString('fr-FR', { maximumFractionDigits: 1 });
-export const formatRate = value => value == null ? 'Indisponible' : `${formatNumber(value * 100)} %`;
+export const PERIOD = '2021 · weeks 1–8';
+export const formatNumber = value => value.toLocaleString('en-US', { maximumFractionDigits: 1 });
+export const formatRate = value => value == null ? 'Unavailable' : `${formatNumber(value * 100)}%`;
 
 // Eligibility and ranks are published by the pipeline; display order follows those ranks.
 export function leagueRows(rb) {
@@ -14,8 +14,8 @@ export function leagueRows(rb) {
 }
 
 export function quoteFor(row) {
-  const standing = row.percentile == null ? 'figure parmi les backs éligibles' :
-    row.percentile >= 90 ? 'se situe dans le top 10 % des backs éligibles' :
-      `affiche un percentile de ${formatNumber(row.percentile)} parmi les backs éligibles`;
-  return `${row.displayName} ${standing} pour la disponibilité sous pression, sur ${formatNumber(row.counts.evaluatedPlays)} routes pressurées évaluables (${PERIOD}).`;
+  const standing = row.percentile == null ? 'ranks among eligible backs' :
+    row.percentile >= 90 ? 'ranks in the top 10% of eligible backs' :
+      `sits at the ${formatNumber(row.percentile)} percentile among eligible backs`;
+  return `${row.displayName} ${standing} for availability under pressure, over ${formatNumber(row.counts.evaluatedPlays)} evaluable pressured routes (${PERIOD}).`;
 }
