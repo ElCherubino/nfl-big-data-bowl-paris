@@ -50,7 +50,7 @@ def _value(key: str, value: str | None) -> Any:
 
 def _read(path: Path, table: str) -> list[dict]:
     if not path.is_file():
-        raise DataError(f"Missing {path}. Initialize sources with git submodule update --init --recursive, or set --data-dir to the supplied data directory.")
+        raise DataError(f"Missing {path}. Restore the tracked nfl-data/data files from the repository, or set --data-dir to the supplied data directory.")
     rows, seen = [], set()
     with path.open(newline="", encoding="utf-8-sig") as stream:
         reader = csv.DictReader(stream)
