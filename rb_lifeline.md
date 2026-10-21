@@ -1,6 +1,49 @@
 # RB Lifeline
 
-**One-line goal:** at the exact moment pressure reaches the quarterback, show whether his running back is **available as an outlet** (open, within reach, past the line of scrimmage, turned toward the QB), rank RBs and offenses on how often they are, and compare what happens next: sack rate, how often the QB throws to the RB, completion. The question being measured: **when the pocket collapses, is there a lifeline?** The same per-play output feeds a **scout ranking**, a **coach dashboard** (play by play) and a **broadcast card**.
+**One-line goal:** at the exact moment pressure reaches the quarterback, show whether his running back is **available as an outlet** (open, within reach, past the line of scrimmage, turned toward the QB), rank RBs and offenses on how often they are, and compare what happens next: sack rate, how often the QB throws to the RB, completion. The question being measured: **when the pocket collapses, is there a lifeline?** The same per-play output feeds **one website with two dashboards**: a **coach dashboard** (game → play by play in 2D, RB availability per game and per season) and a **broadcaster dashboard** (season ranking "Best safety valves"). See [Deliverable — the POC website](#deliverable--the-poc-website).
+
+## Deliverable — the POC website
+
+**What we ship:** one website, two entry points (Coach / Broadcaster). Every number on it comes from the Python pipeline below; the site only displays precomputed files, it computes nothing and invents nothing. The current `website/` scaffold (React + Vite) holds **synthetic demo content only** and must be wired to the computed files before the demo.
+
+**Scope of "season":** the dataset covers **2021, weeks 1–8** (122 games). Every season figure is labelled "2021 · weeks 1–8", never "full season".
+
+### The one metric shown everywhere — availability rate
+**Availability rate = pressured plays where the RB is available ÷ pressured plays where the RB runs a route** (five conditions at the pressure frame, see [Definitions](#definitions-fixed-before-the-results-are-read)). The same definition is used at play, game and season level; only the set of plays changes. Always displayed with its **n** ("4 / 11 · 36 %").
+
+### 1. Coach dashboard
+Navigation: **Game** (week, teams, score) → three views.
+
+**1a. Play by play (per game)**
+- Play list: every dropback play of the game, with quarter, clock, down & distance, `playDescription`, outcome (sack / completion / incompletion / RB targeted) and a badge **pressured · RB available / not available / RB blocking**. Default filter: pressured plays with an RB route runner (the plays that count in the rate).
+- **2D animation** of the selected play, from the snap to the throw or sack (10 Hz, play/pause, frame slider, speed ×0.5/×1):
+  - all 22 players + ball on a field drawn to scale, line of scrimmage shown, offense always moving left → right (`normalize_play_direction()`);
+  - **trajectory:** trail of past positions for the RB and the QB (short fading trail for the other players);
+  - **where he faces:** an orientation arrow on the RB and the QB from `o`. It is **body orientation**, labelled as such ("facing", not "looking");
+  - **RB colour per frame:** **green** when the four spatial checks pass at that frame (open > 2.5 yd, < 15 yd from the QB, at most 1 yd behind the line, QB within 90° of his orientation), **red** otherwise, **grey** when the RB is blocking (not an outlet by design). A ✓/✗ mark next to the dot so the colour is not the only signal;
+  - **pressure moment:** marked on the slider; the animation pauses there and a side panel shows the five checks with their values (e.g. "nearest defender 4.1 yd ✓ · 9.2 yd from QB ✓ · 2 yd past the line ✓ · 40° ✓"), plus the closest defender to the QB highlighted. **The play verdict is the colour at the pressure frame**, not at any other frame.
+- Plays without a tracking pressure moment are viewable (colours still shown) but labelled "no pressure → not counted".
+
+**1b. RB availability — this game**
+Table of every RB/FB of both teams who ran a route on at least one pressured play: available / pressured route plays, raw %, RB targeted when available. Clicking an RB filters the play list to his plays. **No ranking, no shrinkage, no interval at game level:** n is typically 0–10 per RB per game, so the table is a play-count summary, shown with the caption "small sample, use the plays as film references".
+
+**1c. RB availability — season (2021, weeks 1–8)**
+Sortable table for every RB, filterable by team: n (pressured route plays), available, raw %, **shrunk %** (sort key, k = 20 toward the league mean), 95 % interval, targeted when available, completion when targeted. RBs below the minimum n (20) appear greyed out with "n too small" and no rank. A team table (availability per offense, 37+ plays each) sits next to it, because team rates are more stable and reflect play design, which is what a coordinator controls.
+
+### 2. Broadcaster dashboard — "Best safety valves"
+One screen: **league-wide ranking of RBs by season availability rate** (2021, weeks 1–8), sorted by shrunk %, only RBs with n ≥ 20 (48 RBs with the default rules).
+- Each row: rank, RB, team, availability % (shrunk, raw in small print), n, percentile ("top 10 % of backs").
+- League mean shown as a reference line (15.0 % with the default rules).
+- Fixed caption: "Share of pressured snaps where the RB was open, in range, past the line and facing the QB. Reflects the player *and* his team's play design; not a causal grade."
+- No per-play view, no animation, no model text. A sentence such as "top 10 % of backs at being available under pressure (n = 39)" is generated only from the computed table.
+
+### Data flow (POC)
+`nfl-data/` CSV → Python pipeline (functions in the build plan, tested) → static files read by the site:
+- `season_rb.json`, `season_team.json` — season tables (coach 1c + broadcaster);
+- `games.json` — game list;
+- `game_<gameId>.json` — plays of one game, per-play checks and verdict, per-game RB table, and the frames of the dropback plays (positions rounded to 0.1 yd, `o`, per-frame RB check flags), loaded only when the game is opened.
+
+The site is static (no backend), so it can be served locally or from any static host if the rules permit it.
 
 ## Data check — PASSED on the supplied dataset (verified 2026-10-21)
 Dataset: NFL Big Data Bowl 2023, available locally at `nfl-data/data/` (git submodule; clone with `--recursive` or run `git submodule update --init`): 2021 season, weeks 1–8, 122 games, 8,557 **dropback plays only**.
@@ -80,10 +123,10 @@ The sack gap stays at about 4–5 points and the target rate at about ×2.6 what
 
 **Offenses:** all 32 teams have 37+ pressured RB route plays (median 70); availability ranges from 5.4 % to 27.4 %.
 
-## Rankings — who can use which one
-- **Scouts / front office — RB ranking:** availability rate per RB with n, the shrunk value as the sort key and an interval; companion columns: targeted when available, completion. Read it as **indicative** (20+ plays per RB over 8 weeks), not a grade. Use it to choose whose film to watch, e.g. an RB who is often available but rarely targeted.
-- **Coaches — offense ranking:** availability per team (37+ plays each, median 70) is more stable and partly reflects play design (route assignments, protection rules), which is what a coordinator controls.
-- **Broadcasters — percentile line:** "this RB is in the top 10 % of backs at being available under pressure (n = …)", only when n ≥ 20.
+## How to read the rankings
+- **RB season ranking (coach 1c, broadcaster):** **indicative** (20+ plays per RB over 8 weeks), not a grade. Use it to choose whose film to watch, e.g. an RB who is often available but rarely targeted.
+- **Offense ranking (coach 1c):** availability per team (37+ plays each, median 70) is more stable and partly reflects play design (route assignments, protection rules).
+- **Per-game RB table (coach 1b):** counts, not a ranking.
 
 ## Known biases — must be shown in the deliverable
 - **Selection:** teams keep the RB in to block when they expect pressure. Raw first look (plays with exactly one RB/FB): when the RB blocks, PFF pressure is higher (Man 47 % vs. 39 %, Zone 43 % vs. 35 %) and so is the sack rate. Never conclude that blocking or releasing *causes* fewer sacks.
@@ -106,32 +149,32 @@ The sack gap stays at about 4–5 points and the target rate at about ×2.6 what
 - Minimum n for the RB ranking: 20 (48 RBs, default) vs. 15 (61 RBs) vs. 30 (33 RBs). The conditions change the numerator only; the per-RB sample is the number of pressured route plays.
 - Count FB with RB (default) or RB only.
 - nflverse join to cross-check targets (allowed as free public data; confirm network and rules).
+- Hosting of the static site (local demo vs. public static host): confirm with the event rules.
 
-## Deliverables
-### Scout ranking
-Sortable RB table (n, available, raw %, shrunk %, interval, targeted when available) + team table.
-### Coach dashboard (game review)
-Game → play list (pressured plays only) → **freeze-frame at the pressure moment**: QB, closest defender with an arrow, RB circled with the five checks and their values; play animation from snap to throw as a GIF.
-### Broadcast card
-One sentence built only from computed numbers, e.g. (illustrative values) "Pressure at 2.4 s · RB open (4.1 yd), 9 yd from the QB, past the line, turned toward him (40°) → lifeline available." Shown only when the play passes all checks.
+**Out of the POC scope (only if time remains):** per-play broadcast sentence ("Pressure at 2.4 s · RB open (4.1 yd) … → lifeline available"), exported GIF of a play, scout-specific views beyond the season table.
 
 ## Definition of done
 - Definitions above applied in code with unit tests; prototype numbers reproduced or corrected.
 - League comparison with intervals and the strata check.
-- RB and team rankings with n and shrinkage.
-- Two verified freeze-frames (available → completion, not available → sack) and one GIF.
-- At least 5 plays checked by eye (pressure frame, RB checks vs. drawn positions).
+- RB and team season rankings with n and shrinkage; per-game RB tables with n.
+- JSON exports generated by the pipeline and loaded by the site; **no synthetic value left on the site**.
+- Coach dashboard: any of the 122 games opens, any dropback play animates from snap to throw/sack with trails, orientation arrows, per-frame green/red RB and the pressure-frame panel.
+- Broadcaster dashboard: "Best safety valves" ranking with n, min n = 20, league mean, caption.
+- At least 5 plays checked by eye: pressure frame and RB colour in the animation vs. the computed checks (incl. one available → completion and one not available → sack).
+- Per-game RB counts summed over all games equal the season n (consistency test).
 - Submission README with the limitations from **Known biases**.
 
 ## Concrete build plan — functions
-`load_play_table()`; `normalize_play_direction()`; `find_snap_and_throw_or_sack_frames()`; `line_of_scrimmage()`; `qb_defender_distance()`; `find_pressure_frame()`; `validate_pressure_proxy()`; `rb_checks_at(frame)` (open, in range, past the line, turned toward the QB); `flag_rb_available()`; `parse_target_receiver()`; `outcomes_by_availability()` (with bootstrap); `rank_rbs()` and `rank_offenses()` (shrinkage, minimum n); `render_freeze_frame()`; `render_play_gif()`; `broadcast_sentence()`.
+**Pipeline (Python):** `load_play_table()`; `normalize_play_direction()`; `find_snap_and_throw_or_sack_frames()`; `line_of_scrimmage()`; `qb_defender_distance()`; `find_pressure_frame()`; `validate_pressure_proxy()`; `rb_checks_at(frame)` (open, in range, past the line, turned toward the QB) applied to **every frame** for the animation colour; `flag_rb_available()` (checks at the pressure frame = play verdict); `parse_target_receiver()`; `outcomes_by_availability()` (with bootstrap); `rb_availability_by_game()`; `rank_rbs()` and `rank_offenses()` (shrinkage, minimum n); `export_site_data()` (season, games and per-game JSON).
 
-**Tests:** synthetic frames for direction normalization, bearing vs. `o` (0° = +y, clockwise), the five checks on hand-built positions, pressure frame when no defender reaches 2 yd, sack plays without a throw, target parser on real descriptions incl. unmatched names, ranking refuses to list an RB below the minimum n.
+**Website (`website/`):** game picker; play list with badges; `FieldAnimation` (field, players, trails, orientation arrows, per-frame RB colour, pressure marker and checks panel); per-game RB table; season RB + team tables; broadcaster "Best safety valves" page.
+
+**Tests:** synthetic frames for direction normalization, bearing vs. `o` (0° = +y, clockwise), the five checks on hand-built positions, pressure frame when no defender reaches 2 yd, sack plays without a throw, target parser on real descriptions incl. unmatched names, ranking refuses to list an RB below the minimum n, per-frame flag at the pressure frame equals the play verdict, per-game sums equal season totals.
 
 ## Who is it useful for, and why
-- **Scouts and front offices:** which RBs give their QB an escape route under pressure, a third-down skill box scores do not show.
-- **Offensive coordinators and RB coaches:** how often their check-down design actually produces an outlet when the pocket breaks.
-- **Broadcasters:** a verified explanation of a sack ("no lifeline") or of a check-down completion.
+- **Offensive coordinators and RB coaches (coach dashboard):** replay each pressured play of a game and see whether the back was a usable outlet when the pocket broke; follow each RB over the game and the season; compare offenses on how often their check-down design produces an outlet.
+- **Scouts and front offices (season table):** which RBs give their QB an escape route under pressure, a third-down skill box scores do not show.
+- **Broadcasters (broadcaster dashboard):** a ready, verified "Best safety valves" ranking to quote on air, with n.
 
 ## Novelty caveat
 Hypothesis, not a proven original idea. BDB 2023 centered on pass rush and protection, where the RB is studied as a blocker; the angle here is the RB as the **receiving outlet at the moment of pressure**. Check existing BDB 2023 notebooks and Next Gen Stats before claiming novelty.
