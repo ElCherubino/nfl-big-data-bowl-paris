@@ -10,3 +10,8 @@ __pycache__/
 environment_report.json
 outputs/
 .DS_Store
+
+# JavaScript dependencies, build output and downloaded-file metadata
+node_modules/
+/website/dist/
+*:Zone.Identifier
