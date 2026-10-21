@@ -16,8 +16,6 @@ Beyond coaching, the same score gives scouts a way to compare third-down backs a
 ## Live demo
 
 - Website: https://rb-lifeline.vercel.app/
-- Video (37 s, 1080p): [docs/rb_lifeline_demo.mp4](docs/rb_lifeline_demo.mp4)
-
 
 
 
