@@ -1,0 +1,233 @@
+#!/usr/bin/env bash
+# Generic machine bootstrap only. Never use this file as a hackathon submission.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")" && pwd)"
+VENV="$ROOT/.venv"
+DRY=0
+CHECK=0
+YES=0
+SKIP_SKILLS=0
+AWS=0
+AGENTS=()
+
+note() { printf '\n[setup] %s\n' "$*"; }
+warn() { printf '[warning] %s\n' "$*" >&2; }
+die() { printf '[error] %s\n' "$*" >&2; exit 1; }
+usage() {
+  cat <<'EOF'
+Usage: ./prepare_environnement [options]
+  --dry-run          Show planned operations; change nothing
+  --check            Verify environment and installed skills; change nothing
+  --yes              Accept public skill installations without prompting
+  --no-skills        Install/verify Python tools only
+  --aws              Also install boto3 and the public AWS Bedrock skill
+  --agent NAME       Target a coding agent: kiro-cli, claude-code, codex (repeatable)
+  --all-agents       Target all three supported coding agents
+  --help             Show this help
+Examples:
+  ./prepare_environnement --dry-run
+  ./prepare_environnement --yes
+  ./prepare_environnement --yes --all-agents --aws
+  ./prepare_environnement --check
+EOF
+}
+while (($#)); do
+  case "$1" in
+    --dry-run) DRY=1; shift ;;
+    --check) CHECK=1; shift ;;
+    --yes) YES=1; shift ;;
+    --no-skills) SKIP_SKILLS=1; shift ;;
+    --aws) AWS=1; shift ;;
+    --all-agents) AGENTS=(kiro-cli claude-code codex); shift ;;
+    --agent)
+      (($# >= 2)) || die "--agent requires a value"
+      case "$2" in kiro-cli|claude-code|codex) AGENTS+=("$2") ;; *) die "Unknown agent: $2" ;; esac
+      shift 2 ;;
+    --help|-h) usage; exit 0 ;;
+    *) die "Unknown argument: $1 (see --help)" ;;
+  esac
+done
+if (( DRY && CHECK )); then die "--dry-run and --check cannot be combined"; fi
+if (("${#AGENTS[@]}" == 0)); then
+  AGENTS=(kiro-cli)
+  command -v claude >/dev/null 2>&1 && AGENTS+=(claude-code)
+  command -v codex >/dev/null 2>&1 && AGENTS+=(codex)
+fi
+# Deduplicate agent targets. The ${arr[@]+...} form keeps macOS bash 3.2 happy with
+# empty arrays under `set -u`.
+UNIQUE=()
+for a in "${AGENTS[@]}"; do
+  found=0
+  for b in ${UNIQUE[@]+"${UNIQUE[@]}"}; do [[ "$a" == "$b" ]] && found=1; done
+  ((found)) || UNIQUE+=("$a")
+done
+AGENTS=("${UNIQUE[@]}")
+
+case "$(uname -s 2>/dev/null || printf unknown)" in
+  Darwin*) OS=macOS ;;
+  Linux*) OS=Linux ;;
+  MINGW*|MSYS*|CYGWIN*) OS="Windows (Git Bash)" ;;
+  *) OS=unknown ;;
+esac
+note "Platform: $OS | Repo: $ROOT"
+note "Agent skill targets: ${AGENTS[*]}"
+note "Prerequisites: Git, Python >= 3.11; Node.js >= 20 and npx for skills."
+if ! command -v git >/dev/null 2>&1; then
+  warn "Git missing. Install from https://git-scm.com/downloads"
+  ((DRY)) || die "Install Git, then rerun."
+else
+  git --version
+fi
+
+PYTHON=()
+for candidate in python3 python; do
+  if command -v "$candidate" >/dev/null 2>&1 &&
+     "$candidate" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)' >/dev/null 2>&1; then
+    PYTHON=("$candidate")
+    break
+  fi
+done
+if (("${#PYTHON[@]}" == 0)) && command -v py >/dev/null 2>&1 &&
+   py -3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)' >/dev/null 2>&1; then
+  PYTHON=(py -3)
+fi
+if (("${#PYTHON[@]}" == 0)); then
+  warn "Python >= 3.11 missing. Install from https://www.python.org/downloads/ (enable PATH on Windows)."
+  ((DRY)) || die "Install Python, then rerun."
+else
+  "${PYTHON[@]}" --version
+fi
+
+if [[ "$OS" == "Windows (Git Bash)" ]]; then
+  VENV_PY="$VENV/Scripts/python.exe"
+else
+  VENV_PY="$VENV/bin/python"
+fi
+
+show_run() { printf '  '; printf '%q ' "$@"; printf '\n'; }
+python_health() {
+  "$VENV_PY" - <<'PY'
+import importlib, sys
+required = ["numpy", "pandas", "scipy", "sklearn", "pyarrow", "duckdb",
+            "plotly", "streamlit", "matplotlib", "seaborn", "pytest",
+            "ipykernel"]
+missing = []
+for name in required:
+    try:
+        module = importlib.import_module(name)
+        print(f"  OK {name}: {getattr(module, '__version__', 'installed')}")
+    except Exception as exc:
+        print(f"  MISSING {name}: {exc}")
+        missing.append(name)
+if missing:
+    sys.exit(1)
+PY
+}
+
+agent_dir() {
+  case "$1" in
+    kiro-cli) printf '%s' "$HOME/.kiro/skills" ;;
+    claude-code) printf '%s' "$HOME/.claude/skills" ;;
+    codex) printf '%s' "$HOME/.codex/skills" ;;
+  esac
+}
+skill_health() {
+  local missed=0 a dir skill
+  for a in "${AGENTS[@]}"; do
+    dir="$(agent_dir "$a")"
+    note "Checking global skills for $a at $dir"
+    for skill in grill-me grilling research implement tdd code-review diagnosing-bugs handoff pr explore-data validate-data data-visualization; do
+      if [[ -f "$dir/$skill/SKILL.md" ]]; then
+        printf '  OK %s\n' "$skill"
+      else
+        printf '  MISSING %s\n' "$skill"
+        missed=1
+      fi
+    done
+    if ((AWS)); then
+      [[ -f "$dir/amazon-bedrock/SKILL.md" ]] || { warn "amazon-bedrock missing for $a"; missed=1; }
+    fi
+  done
+  return "$missed"
+}
+if ((CHECK)); then
+  [[ -f "$VENV_PY" ]] || die "Virtual environment absent. Run ./prepare_environnement first."
+  note "Checking Python libraries"
+  python_health || die "Some Python libraries are missing."
+  if ((! SKIP_SKILLS)); then skill_health || die "Some skills are missing; run the installer."; fi
+  note "Environment verification passed."
+  exit 0
+fi
+
+if ((DRY)); then
+  note "DRY RUN: no files, Python packages or skills will be installed."
+  [[ -f "$VENV_PY" ]] || { note "Would create isolated Python environment:"; show_run ${PYTHON[@]+"${PYTHON[@]}"} -m venv "$VENV"; }
+  note "Would install core Python stack from requirements.txt:"
+  show_run "$VENV_PY" -m pip install -r "$ROOT/requirements.txt"
+  if ((AWS)); then show_run "$VENV_PY" -m pip install -r "$ROOT/requirements-aws.txt"; fi
+  if ((! SKIP_SKILLS)); then
+    note "Would install P0 skills globally for: ${AGENTS[*]}"
+    printf '  AI Hero: grill-me grilling research implement tdd code-review diagnosing-bugs handoff pr\n'
+    printf '  Anthropic: explore-data validate-data data-visualization\n'
+    ((AWS)) && printf '  AWS: amazon-bedrock\n'
+  fi
+  exit 0
+fi
+
+[[ -f "$ROOT/requirements.txt" ]] || die "Missing requirements.txt"
+if [[ ! -f "$VENV_PY" ]]; then
+  note "Creating local .venv"
+  "${PYTHON[@]}" -m venv "$VENV" || die "venv creation failed (install Python venv support, then retry)."
+fi
+note "Installing analytics and visualization Python dependencies"
+"$VENV_PY" -m pip install -r "$ROOT/requirements.txt"
+if ((AWS)); then
+  note "Installing optional AWS SDK"
+  "$VENV_PY" -m pip install -r "$ROOT/requirements-aws.txt"
+fi
+note "Checking Python environment"
+python_health || die "Python health check failed."
+
+if ((SKIP_SKILLS)); then
+  note "Skills intentionally skipped (--no-skills)."
+else
+  command -v node >/dev/null 2>&1 || die "Python is ready, but Node.js is missing. Install Node.js >=20: https://nodejs.org/ and rerun."
+  node -e 'process.exit(Number(process.versions.node.split(".")[0]) >= 20 ? 0 : 1)' ||
+    die "Python is ready, but Node.js >=20 is required for the skills installer."
+  command -v npx >/dev/null 2>&1 || die "Python is ready, but npx is unavailable. Reinstall Node.js/npm."
+  if ((! YES)); then
+    printf '\nPublic agent skills will be copied into your user directory (not this repository).\n'
+    printf 'Sources: mattpocock/skills, anthropics/knowledge-work-plugins'
+    ((AWS)) && printf ', aws/agent-toolkit-for-aws'
+    printf '\nReview third-party skill instructions and dependencies before using them.\n'
+    [[ -t 0 ]] || die "Interactive consent required for skill installation; use --yes after reviewing."
+    read -r -p 'Install these public skills? [y/N] ' answer
+    [[ "$answer" == "y" || "$answer" == "Y" ]] || die "Skills declined; Python environment is still ready."
+  fi
+  skill_cmd=(npx --yes skills@latest add mattpocock/skills -g --copy -y)
+  for skill in grill-me grilling research implement tdd code-review diagnosing-bugs handoff pr; do
+    skill_cmd+=(--skill "$skill")
+  done
+  for a in "${AGENTS[@]}"; do skill_cmd+=(--agent "$a"); done
+  note "Installing approved AI Hero skill set"
+  "${skill_cmd[@]}"
+  for skill in explore-data validate-data data-visualization; do
+    url="https://github.com/anthropics/knowledge-work-plugins/tree/main/data/skills/$skill"
+    skill_cmd=(npx --yes skills@latest add "$url" -g --copy -y --skill "$skill")
+    for a in "${AGENTS[@]}"; do skill_cmd+=(--agent "$a"); done
+    note "Installing Anthropic $skill"
+    "${skill_cmd[@]}"
+  done
+  if ((AWS)); then
+    skill_cmd=(npx --yes skills@latest add "https://github.com/aws/agent-toolkit-for-aws/tree/main/plugins/aws-core/skills/amazon-bedrock" -g --copy -y --skill amazon-bedrock)
+    for a in "${AGENTS[@]}"; do skill_cmd+=(--agent "$a"); done
+    note "Installing optional AWS Bedrock skill"
+    "${skill_cmd[@]}"
+  fi
+  skill_health || die "Install finished but one or more skills are missing; review installer output."
+fi
+cp "$ROOT/requirements.txt" "$VENV/requirements-installed.txt"
+note "Ready. Python interpreter: $VENV_PY"
+note "Activate the virtual environment: source .venv/bin/activate (Windows Git Bash: source .venv/Scripts/activate)"
+note "Run ./prepare_environnement --check to verify later."

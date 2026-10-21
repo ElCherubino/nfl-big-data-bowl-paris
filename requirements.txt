@@ -1,0 +1,16 @@
+# General-purpose, pre-existing Python libraries only. No hackathon application code.
+# Python >= 3.11
+numpy>=2.0,<3
+pandas>=2.2,<3
+scipy>=1.14,<2
+scikit-learn>=1.5,<2
+pyarrow>=18,<25
+duckdb>=1.1,<2
+plotly>=5.24,<7
+streamlit>=1.39,<2
+matplotlib>=3.9,<4
+# Listed by the organizers' participant guide
+seaborn>=0.13,<1
+pytest>=8,<10
+# Jupyter kernel for notebooks in Kiro/VS Code (the guide asks for saved cell outputs)
+ipykernel>=6.29,<8

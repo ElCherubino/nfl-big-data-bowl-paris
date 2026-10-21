@@ -1,0 +1,12 @@
+{
+  "name": "nfl-aws-presentation-reference",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Generic, editable data-free reference deck. Never submit prebuilt competition assets.",
+  "scripts": {
+    "build": "node generate_template.js nfl_aws_evidence_first_template.pptx"
+  },
+  "dependencies": {
+    "pptxgenjs": "4.0.0"
+  }
+}

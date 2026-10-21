@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Install the local Python environment when needed, then launch the dashboard.
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")" && pwd)"
+cd "$ROOT"
+
+if [[ -x "$ROOT/.venv/bin/python" ]]; then
+  PY="$ROOT/.venv/bin/python"
+elif [[ -x "$ROOT/.venv/Scripts/python.exe" ]]; then
+  PY="$ROOT/.venv/Scripts/python.exe"
+else
+  PY=""
+fi
+
+# Only record success after the installer and its import checks finish.
+# A changed requirements file triggers setup again on the next launch.
+if [[ -z "$PY" ]] || [[ ! -f .venv/requirements-installed.txt ]] ||
+   ! cmp -s requirements.txt .venv/requirements-installed.txt; then
+  ./prepare_environnement --no-skills
+  cp requirements.txt .venv/requirements-installed.txt
+  if [[ -x "$ROOT/.venv/bin/python" ]]; then
+    PY="$ROOT/.venv/bin/python"
+  else
+    PY="$ROOT/.venv/Scripts/python.exe"
+  fi
+fi
+
+exec "$PY" -m streamlit run "$ROOT/app.py" "$@"
